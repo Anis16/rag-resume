@@ -1,0 +1,31 @@
+# http-scaledobject.yaml — scale the orchestrator on live HTTP traffic
+#
+# Prereqs (one-time, same as your text-to-SQL project):
+#   helm repo add kedacore https://kedacore.github.io/charts
+#   helm repo update
+#   kubectl create namespace keda
+#   helm install keda kedacore/keda --namespace keda
+#   helm install http-add-on kedacore/keda-add-ons-http --namespace keda
+#
+# Route your Ingress to the HTTP add-on's interceptor service (not
+# directly to the orchestrator Service) so it can count requests.
+
+apiVersion: http.keda.sh/v1alpha1
+kind: HTTPScaledObject
+metadata:
+  name: orchestrator-http-scaledobject
+  namespace: cv-rag
+spec:
+  hosts:
+    - cv-rag.example.com          # <-- the hostname clients will hit
+  targetPendingRequests: 5        # low threshold — this is a low-traffic personal project
+  scaleTargetRef:
+    name: orchestrator
+    kind: Deployment
+    apiVersion: apps/v1
+    service: orchestrator
+    port: 80
+  replicas:
+    min: 1                        # kept warm — see architecture notes on cold starts
+    max: 3
+  scaledownPeriod: 300

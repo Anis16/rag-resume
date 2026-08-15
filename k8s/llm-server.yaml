@@ -1,0 +1,56 @@
+# llm-server.yaml — small instruct model, no fine-tuning needed for this project
+# Build the image the same way as your text-to-SQL project's Dockerfile,
+# but package a small INSTRUCT model instead — e.g. Qwen2.5-1.5B-Instruct
+# quantized to GGUF (Q4_K_M). No QLoRA fine-tuning needed here: RAG supplies
+# the facts, the base instruct model supplies the language ability.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: llm-server
+  namespace: cv-rag
+  labels:
+    app: llm-server
+spec:
+  replicas: 1   # kept warm — see min:1 note in the HTTPScaledObject below
+  selector:
+    matchLabels:
+      app: llm-server
+  template:
+    metadata:
+      labels:
+        app: llm-server
+    spec:
+      containers:
+        - name: llm-server
+          image: cv-rag-llm:v1
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "2"
+              memory: "2Gi"
+            limits:
+              cpu: "5"
+              memory: "3Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 5
+            timeoutSeconds: 10
+            failureThreshold: 6
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: llm-server
+  namespace: cv-rag
+spec:
+  selector:
+    app: llm-server
+  ports:
+    - port: 80
+      targetPort: 8080

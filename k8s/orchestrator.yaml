@@ -1,0 +1,57 @@
+# orchestrator.yaml — the RAG orchestrator (FastAPI)
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orchestrator
+  namespace: cv-rag
+  labels:
+    app: orchestrator
+spec:
+  replicas: 1   # KEDA scales this up under load, floor of 1 to avoid cold start
+  selector:
+    matchLabels:
+      app: orchestrator
+  template:
+    metadata:
+      labels:
+        app: orchestrator
+    spec:
+      containers:
+        - name: orchestrator
+          image: cv-rag-orchestrator:v1
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: QDRANT_URL
+              value: "http://qdrant:6333"
+            - name: REDIS_URL
+              value: "redis://redis:6379"
+            - name: LLM_URL
+              value: "http://llm-server/completion"
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "768Mi"   # sentence-transformers model held in memory
+            limits:
+              cpu: "1"
+              memory: "1Gi"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 10
+            periodSeconds: 5
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orchestrator
+  namespace: cv-rag
+spec:
+  selector:
+    app: orchestrator
+  ports:
+    - port: 80
+      targetPort: 8000
