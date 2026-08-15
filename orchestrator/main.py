@@ -38,7 +38,7 @@ qdrant = QdrantClient(url=QDRANT_URL)
 cache = redis.from_url(REDIS_URL, decode_responses=True)
 
 SYSTEM_PROMPT = (
-    "You are answering questions about Anis Amor, a DevOps/MLOps engineer, "
+    "You are answering questions <>"
     "based only on the CV context provided below. If the context doesn't "
     "contain the answer, say you don't have that information rather than "
     "guessing. Answer concisely and in third person."
